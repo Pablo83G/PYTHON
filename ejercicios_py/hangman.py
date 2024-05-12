@@ -1,6 +1,10 @@
-# import pandas as pd
+import pandas as pd
 import csv
 import random
+import uuid
+from datetime import datetime
+from os import path
+
 
 class Hangman:
     def __init__(self):
@@ -12,6 +16,9 @@ class Hangman:
         self.score = 0 
         self.letter = ''
         self.victory = False
+        self.id = ''
+        self.start_dt = ''
+        self.end_dt = ''
         self.used_letters = set()
         self.right_letters = set()
     
@@ -48,9 +55,18 @@ class Hangman:
     def start_game(self):
         self.username = ''
         self.user_rounds = 0
+        self.start_dt = ''
+        self.end_dt = ''
+        self.id = ''
 
         if(self.get_number_of_words()):
             print(f'¡¡Bienvenidos al AHORCADO!!')
+            
+            # Generamos un id aleatorio y registramos la fecha y
+            # hora de inicio
+            self.random_game_id()
+            self.start_date()
+            
             self.username = input('Introduce tu nombre de usuario: ')
             print(f'{self.username} adivina la palabra:')
             
@@ -59,16 +75,15 @@ class Hangman:
                 self.user_rounds = round + 1
                 print(f'Estas en la ronda {self.user_rounds}')
                 self.play_round()
-                # self.register_round('./files/rounds_in_games.csv')
+                self.save_round()
             
             # Punttuación final
             print(f'FIN DEL JUEGO. {self.username} tu puntuación final es {self.score}')
 
-            # Fecha de finalizacion
-            # self.end_date()
-                   
-            #Registramos los datos de la partida en el fichero games.csv
-            # self.register_game('./files/games.csv')
+            # Fecha y hora de la finalizacion del juego y 
+            # registrar datos del juego
+            self.end_date()
+            self.save_game()
             
         else: 
             print('vaya, parece que no encontramos todas las palabras necesarias, no podemos dar comienzo al juego')
@@ -83,7 +98,8 @@ class Hangman:
         self.used_letters = set()
         self.victory = ''
         self.choose_word()
-        # self.right_letters = set()
+        
+       
         while True:
             self.print_word_progress()
             self.print_hangman()
@@ -157,7 +173,17 @@ class Hangman:
         return print(' '.join([l if l in self.used_letters else '_' for l in self.current_word]))
 
        
-    # METODO: 
+    # METODO: Generar ID con UUID4, que genera uno aleatorio
+    def random_game_id(self):
+        self.id = uuid.uuid4()
+        
+    
+    #METODOS: Establecer la fecha y hora de principio y fin del juego        
+    def start_date(self):
+        self.start_dt = datetime.now()
+        
+    def end_date(self):
+        self.end_dt = datetime.now()
     
     
     # METODO: Contiene las imágenes de los estados del ahorcado
@@ -234,7 +260,46 @@ class Hangman:
             if letter not in used_letters:
                 return False
         return True
-# resultado = hangman1.choose_word        
+    
+     
+    # METODO para registrar los datos de la partida 
+    def save_game(self): 
+        
+        df_save_game = pd.DataFrame({
+                        'game_id':[self.id],
+                        'username':[self.username],
+                        'start_date':[self.start_dt],
+                        'end_date':[self.end_dt],
+                        'final_score':[self.score]
+                        })
+        
+        if path.exists('./ficheros/games.csv') and path.getsize('./ficheros/games.csv') > 0:
+            # Datos sin encabezados
+            df_save_game.to_csv('./ficheros/games.csv', mode='a', header=False, index=False)
+        else:
+            df_save_game.to_csv('./ficheros/games.csv', mode='a', header=True, index=False)
+
+        print('Juego registrado')
+      
+        
+     # METODO para registrar las rondas                   
+    def save_round(self):
+            # Crea DataFrame con los datos de la ronda
+        df_save_round = pd.DataFrame({
+            "game_id": [self.id],
+            "word": [self.current_word],
+            "username": [self.username],
+            "round_id": [self.rounds],
+            "user_tries": [self.tries],
+            "victory": [self.victory]
+        })
+        
+        if path.exists('./ficheros/rounds_in_games.csv') and path.getsize('./ficheros/rounds_in_games.csv') > 0:
+            df_save_round.to_csv('./ficheros/rounds_in_games.csv', mode='a', header=False, index=False)
+        else:
+            df_save_round.to_csv('./ficheros/rounds_in_games.csv', mode='a', header=True, index=False)
+
+        print("La ronda ha sido registrada") 
 
 # Pruebas 
 hangman_game = Hangman()
